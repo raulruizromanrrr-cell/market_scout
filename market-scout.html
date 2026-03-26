@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketScout — Doble IA</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#0a0a0f; --surface:#111118; --border:#1e1e2e;
+  --accent:#00ff88; --accent2:#0088ff; --accent3:#cc44ff; --accent4:#ff3b6e;
+  --warn:#ff6b35; --text:#e8e8f0; --muted:#6b6b80; --card:#13131f;
+  --gold:#ffc845; --silver:#aab4c8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* App hidden while logged out */
+#appWrapper { display: none; }
+#appWrapper.visible { display: block; }
+
+/* ═══════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════ */
+#loginScreen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #050508;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif;
+}
+#loginScreen::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 50%, rgba(0,136,255,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 50%, rgba(0,255,136,0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+#loginScreen::after {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,136,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,136,255,0.025) 1px, transparent 1px);
+  background-size: 44px 44px; pointer-events: none;
+}
+.login-box {
+  position: relative; z-index: 1;
+  width: 420px; max-width: 94vw;
+  background: linear-gradient(160deg, #0d1117 0%, #0a0f1a 100%);
+  border: 1px solid rgba(0,136,255,0.25); border-radius: 12px;
+  padding: 44px 40px 36px;
+  box-shadow: 0 0 0 1px rgba(0,255,136,0.06), 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(0,136,255,0.08);
+  animation: loginFadeIn 0.5s ease;
+}
+.login-box::before {
+  content: ''; position: absolute; top: -1px; left: -1px;
+  width: 22px; height: 22px; pointer-events: none;
+  border-top: 2px solid #00ff88; border-left: 2px solid #00ff88;
+  border-radius: 12px 0 0 0;
+}
+.login-box::after {
+  content: ''; position: absolute; bottom: -1px; right: -1px;
+  width: 22px; height: 22px; pointer-events: none;
+  border-bottom: 2px solid #0088ff; border-right: 2px solid #0088ff;
+  border-radius: 0 0 12px 0;
+}
+@keyframes loginFadeIn { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+.login-logo { text-align:center; margin-bottom:6px; font-size:1.65rem; font-weight:800; letter-spacing:-0.5px; }
+.login-logo span { color:#00ff88; }
+.login-logo sub { font-size:0.5rem; color:#6b6b80; letter-spacing:1px; font-weight:400; vertical-align:super; margin-left:4px; }
+.login-tagline { text-align:center; margin-bottom:28px; font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:#2a3a4a; letter-spacing:1.5px; }
+.login-divider { height:1px; background:linear-gradient(90deg,transparent,rgba(0,136,255,0.3),rgba(0,255,136,0.3),transparent); margin-bottom:26px; }
+.login-lang-row { display:flex; justify-content:center; gap:8px; margin-bottom:26px; }
+.login-lang-btn { background:transparent; border:1px solid #1e2a3a; color:#6b6b80; padding:4px 14px; border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; cursor:pointer; transition:all 0.2s; letter-spacing:0.5px; }
+.login-lang-btn.active { background:rgba(0,136,255,0.15); border-color:rgba(0,136,255,0.4); color:#0088ff; font-weight:600; }
+.login-field { margin-bottom:16px; }
+.login-label { font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:#4a6a8a; letter-spacing:2px; text-transform:uppercase; margin-bottom:7px; display:block; }
+.login-input-wrap { position:relative; }
+.login-input { width:100%; background:rgba(0,136,255,0.04); border:1px solid rgba(0,136,255,0.2); border-radius:6px; padding:12px 14px 12px 42px; color:#e8e8f0; font-family:'IBM Plex Mono',monospace; font-size:0.88rem; outline:none; transition:all 0.25s; }
+.login-input:focus { border-color:rgba(0,255,136,0.5); background:rgba(0,255,136,0.03); box-shadow:0 0 0 3px rgba(0,255,136,0.08); }
+.login-input::placeholder { color:#2a3a4a; }
+.login-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); width:15px; height:15px; stroke:#3a5a7a; pointer-events:none; transition:stroke 0.2s; }
+.login-input-wrap:focus-within .login-icon { stroke:#00ff88; }
+.login-error { background:rgba(255,59,110,0.08); border:1px solid rgba(255,59,110,0.25); border-radius:5px; padding:10px 14px; margin-bottom:16px; font-family:'IBM Plex Mono',monospace; font-size:0.73rem; color:#ff3b6e; display:none; text-align:center; }
+.login-error.visible { display:block; animation:shake 0.3s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);} }
+.login-btn { width:100%; padding:13px; background:linear-gradient(135deg,#0055bb,#008844); border:none; border-radius:6px; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem; letter-spacing:0.5px; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; }
+.login-btn-inner { position:relative; z-index:1; display:flex; align-items:center; justify-content:center; gap:8px; }
+.login-btn::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,#0077ff,#00cc66); opacity:0; transition:opacity 0.3s; }
+.login-btn:hover::before { opacity:1; }
+.login-btn:active { transform:scale(0.98); }
+.login-footer { text-align:center; margin-top:20px; font-family:'IBM Plex Mono',monospace; font-size:0.6rem; color:#1a2a3a; letter-spacing:1px; }
+.login-dots { display:flex; justify-content:center; gap:6px; margin-bottom:28px; }
+.login-dot { width:6px; height:6px; border-radius:50%; }
+.login-dot:nth-child(1) { background:#00ff88; }
+.login-dot:nth-child(2) { background:#0088ff; }
+.login-dot:nth-child(3) { background:#ffffff22; }
+header{padding:22px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.logo{font-size:1.3rem;font-weight:800;letter-spacing:-0.5px;}
+.logo span{color:var(--accent);}
+.logo sub{font-size:0.55rem;color:var(--muted);letter-spacing:1px;font-weight:400;vertical-align:super;margin-left:4px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.badge{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--accent);border:1px solid var(--accent);padding:4px 10px;border-radius:2px;letter-spacing:1px;}
+.dual-badge{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--gold);border:1px solid var(--gold);padding:4px 10px;border-radius:2px;letter-spacing:1px;}
+.lang-toggle{display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:3px;overflow:hidden;}
+.lang-btn{padding:5px 12px;color:var(--muted);background:transparent;border:none;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;transition:all 0.2s;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+.lang-btn.active{background:var(--accent);color:#000;font-weight:800;}
+.lang-div{width:1px;background:var(--border);align-self:stretch;}
+.power-btn{width:34px;height:34px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;flex-shrink:0;}
+.power-btn svg{width:15px;height:15px;transition:stroke 0.3s;}
+.power-btn.on{border-color:var(--accent);box-shadow:0 0 14px rgba(0,255,136,0.3);}
+.power-btn.on svg{stroke:var(--accent);}
+.power-btn.off{border-color:#2a2a3a;}
+.power-btn.off svg{stroke:#3a3a4a;}
+
+/* v3.0 Additions */
+.header-btns{display:flex;gap:8px;}
+.history-btn{width:34px;height:34px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;color:var(--muted);}
+.history-btn:hover{border-color:var(--accent);color:var(--accent);}
+.history-btn svg{width:16px;height:16px;}
+
+.radar-wrap{position:relative;width:100%;height:180px;display:flex;justify-content:center;margin:10px 0;}
+.radar-canvas{max-width:240px;height:100%;}
+
+.roadmap-card{background:linear-gradient(135deg, rgba(0,255,136,0.05) 0%, rgba(0,0,0,0) 100%);border-left:3px solid var(--accent) !important;}
+.roadmap-step{margin-bottom:12px;padding-left:15px;position:relative;}
+.roadmap-step::before{content:'';position:absolute;left:0;top:6px;width:6px;height:6px;background:var(--accent);border-radius:50%;}
+.roadmap-phase{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
+.roadmap-text{font-size:0.75rem;line-height:1.4;color:var(--text);}
+
+.history-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:10000;backdrop-filter:blur(5px);}
+.history-modal.visible{display:flex;}
+.history-content{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:90%;max-width:500px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,0.5);}
+.history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;}
+.history-title{font-size:1.1rem;font-weight:700;}
+.history-list{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+.history-item{padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;}
+.history-item:hover{background:rgba(0,255,136,0.05);border-color:var(--accent);}
+.history-niche{font-weight:600;font-size:0.85rem;}
+.history-date{font-size:0.65rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+.btn-export-md{background:rgba(0,255,136,0.1);color:var(--accent);border:1px solid var(--accent);padding:8px 16px;border-radius:4px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;transition:all 0.3s;}
+.btn-export-md:hover{background:var(--accent);color:#000;}
+.power-btn:hover{transform:scale(1.08);}
+.off-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+.off-overlay.visible{display:flex;}
+.off-icon svg{width:72px;height:72px;stroke:#222;}
+.off-text{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:#333;letter-spacing:2px;}
+.off-hint{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#222;letter-spacing:1px;}
+.copy-popup{position:fixed;top:24px;left:24px;z-index:999;background:var(--accent);color:#000;font-family:'IBM Plex Mono',monospace;font-size:0.8rem;font-weight:700;letter-spacing:3px;padding:10px 22px;border-radius:3px;box-shadow:0 4px 24px rgba(0,255,136,0.4);opacity:0;transform:translateY(-8px);transition:opacity 0.2s,transform 0.2s;pointer-events:none;}
+.copy-popup.show{opacity:1;transform:translateY(0);}
+
+/* MAIN */
+main{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:56px 24px 80px;}
+h1{font-size:clamp(1.8rem,4.5vw,3rem);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;}
+h1 em{font-style:normal;color:var(--accent);}
+.subtitle{color:var(--muted);font-size:0.95rem;margin-bottom:40px;font-family:'IBM Plex Mono',monospace;}
+.search-box{display:flex;gap:12px;margin-bottom:40px;}
+.search-box input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px 20px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.95rem;outline:none;transition:border-color 0.2s;}
+.search-box input::placeholder{color:var(--muted);}
+.search-box input:focus{border-color:var(--accent);}
+.btn-analyze{background:var(--accent);color:#000;border:none;padding:16px 28px;border-radius:4px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;transition:all 0.2s;}
+.btn-analyze:hover{background:#00dd77;transform:translateY(-1px);}
+.btn-analyze:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-analyze.loading { color: transparent; position: relative; }
+.btn-analyze.loading::after { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px; border: 2px solid #000; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.demo-badge { display: none; background: rgba(255,200,69,0.15); color: var(--gold); border: 1px solid rgba(255,200,69,0.4); padding: 4px 10px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; font-weight: 700; letter-spacing: 1px; margin-right: 10px; animation: pulse 2s infinite; }
+.demo-badge.visible { display: block; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+/* ═══ PROGRESS BAR ═══ */
+.progress-wrap{display:none;margin-bottom:36px;}
+.progress-wrap.active{display:block;}
+.progress-phases{display:flex;gap:0;margin-bottom:14px;}
+.phase{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;}
+.phase:not(:last-child)::after{content:'';position:absolute;right:-1px;top:14px;width:2px;height:28px;background:var(--border);z-index:1;}
+.phase-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:0.7rem;transition:all 0.4s;z-index:2;}
+.phase-dot svg{width:12px;height:12px;stroke:var(--muted);}
+.phase-label{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:0.5px;text-align:center;line-height:1.3;}
+.phase-model{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--border);text-align:center;}
+.phase.running .phase-dot{border-color:var(--accent);background:rgba(0,255,136,0.1);animation:pulseDot 1s ease-in-out infinite;}
+.phase.running .phase-dot svg{stroke:var(--accent);}
+.phase.running .phase-label{color:var(--accent);}
+.phase.running .phase-model{color:var(--muted);}
+.phase.done .phase-dot{border-color:var(--accent);background:var(--accent);}
+.phase.done .phase-dot svg{stroke:#000;}
+.phase.done .phase-label{color:var(--text);}
+.phase.done .phase-model{color:var(--muted);}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,0.4);}50%{box-shadow:0 0 0 6px rgba(0,255,136,0);}}
+.progress-bar-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width 0.8s ease;width:0%;}
+.progress-msg{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--muted);margin-top:10px;text-align:center;min-height:20px;}
+
+/* RESULTS */
+#results{display:none;animation:fadeUp 0.5s ease;}
+#results.visible{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+/* DUAL AI HEADER */
+.dual-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+.dual-title{font-size:1.05rem;font-weight:700;color:var(--muted);}
+.dual-title span{color:var(--accent);}
+.dual-pills{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.model-pill{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;padding:4px 10px;border-radius:2px;font-weight:500;}
+.pill-sonnet{background:rgba(0,136,255,0.12);color:var(--accent2);border:1px solid rgba(0,136,255,0.25);}
+.pill-opus{background:rgba(255,200,69,0.12);color:var(--gold);border:1px solid rgba(255,200,69,0.25);}
+.pill-synth{background:rgba(0,255,136,0.1);color:var(--accent);border:1px solid rgba(0,255,136,0.25);}
+.score-pill{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;padding:6px 14px;border-radius:2px;font-weight:500;}
+.score-high{background:rgba(0,255,136,0.1);color:var(--accent);border:1px solid rgba(0,255,136,0.3);}
+.score-mid{background:rgba(255,107,53,0.1);color:var(--warn);border:1px solid rgba(255,107,53,0.3);}
+
+/* STARS */
+.stars-row{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.stars{color:var(--gold);font-size:0.85rem;letter-spacing:1px;}
+.stars-label{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted);}
+.reliability-tag{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;padding:2px 8px;border-radius:2px;font-weight:600;}
+.rel-5{background:rgba(255,200,69,0.15);color:var(--gold);border:1px solid rgba(255,200,69,0.3);}
+.rel-4{background:rgba(0,255,136,0.12);color:var(--accent);border:1px solid rgba(0,255,136,0.25);}
+.rel-3{background:rgba(0,136,255,0.12);color:var(--accent2);border:1px solid rgba(0,136,255,0.25);}
+.rel-2{background:rgba(255,107,53,0.12);color:var(--warn);border:1px solid rgba(255,107,53,0.25);}
+
+/* DIVERGENCE BLOCK */
+.diverge-block{background:rgba(255,200,69,0.04);border:1px solid rgba(255,200,69,0.2);border-radius:6px;padding:18px 20px;margin-bottom:16px;}
+.diverge-title{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.diverge-item{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--muted);padding:5px 0;border-bottom:1px solid rgba(255,200,69,0.08);line-height:1.5;}
+.diverge-item:last-child{border-bottom:none;}
+.diverge-item strong{color:var(--text);}
+
+/* CONSENSUS BANNER */
+.consensus-banner{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:4px;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;font-size:0.76rem;}
+.consensus-high{background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);color:var(--accent);}
+.consensus-mid{background:rgba(0,136,255,0.06);border:1px solid rgba(0,136,255,0.2);color:var(--accent2);}
+.consensus-low{background:rgba(255,200,69,0.06);border:1px solid rgba(255,200,69,0.2);color:var(--gold);}
+.consensus-pct{font-size:1.1rem;font-weight:700;}
+.consensus-text{color:var(--muted);}
+
+/* SECTION */
+.section-label{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin:26px 0 10px;display:flex;align-items:center;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+@media(max-width:700px){.grid-2{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:22px;transition:border-color 0.2s;}
+.card:hover{border-color:#2e2e4e;}
+.card-full{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:22px;margin-bottom:14px;}
+.card-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+
+/* METRICS */
+.metric{margin-bottom:10px;}
+.metric-row{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:0.76rem;margin-bottom:5px;}
+.metric-name{color:var(--muted);}
+.metric-val{color:var(--text);font-weight:500;}
+.bar-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:2px;background:var(--accent);transition:width 1s ease;width:0;}
+.bar-fill.orange{background:var(--warn);}
+.bar-fill.blue{background:var(--accent2);}
+.bar-fill.purple{background:var(--accent3);}
+
+/* COMPARE BARS (Sonnet vs Opus) */
+.compare-metric{margin-bottom:14px;}
+.compare-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;}
+.compare-label{color:var(--muted);width:110px;flex-shrink:0;}
+.compare-bars{flex:1;display:flex;flex-direction:column;gap:3px;}
+.cbar-wrap{display:flex;align-items:center;gap:6px;}
+.cbar-track{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.cbar-fill{height:100%;border-radius:2px;transition:width 1.2s ease;width:0;}
+.cbar-fill.s{background:var(--accent2);}
+.cbar-fill.o{background:var(--gold);}
+.cbar-val{font-size:0.65rem;width:28px;text-align:right;}
+.cbar-val.s{color:var(--accent2);}
+.cbar-val.o{color:var(--gold);}
+.cbar-model{font-size:0.58rem;color:var(--muted);width:14px;}
+.synth-val{font-size:0.72rem;color:var(--accent);font-weight:600;}
+
+/* COMPETITORS & LEADS */
+.competitor{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:0.78rem;}
+.competitor:last-child{border-bottom:none;}
+.comp-name{color:var(--text);font-weight:500;}
+.comp-tag{font-size:0.68rem;padding:2px 7px;border-radius:2px;}
+.tag-web{background:rgba(0,136,255,0.15);color:var(--accent2);}
+.tag-noweb{background:rgba(255,107,53,0.15);color:var(--warn);}
+.lead-item{padding:11px 0;border-bottom:1px solid var(--border);}
+.lead-item:last-child{border-bottom:none;}
+.lead-name{font-weight:700;font-size:0.88rem;margin-bottom:3px;}
+.lead-detail{font-family:'IBM Plex Mono',monospace;font-size:0.73rem;color:var(--muted);}
+.lead-email{color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:0.73rem;margin-top:3px;}
+
+/* TAGS */
+.tag-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:4px 11px;border-radius:2px;border:1px solid var(--border);color:var(--muted);}
+.tag.pink{border-color:rgba(204,68,255,0.3);color:var(--accent3);background:rgba(204,68,255,0.06);}
+.tag.google{border-color:rgba(0,136,255,0.3);color:var(--accent2);background:rgba(0,136,255,0.06);}
+
+/* DEMOGRAPHIC */
+.demo-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-family:'IBM Plex Mono',monospace;font-size:0.73rem;}
+.demo-label{color:var(--muted);width:78px;flex-shrink:0;}
+.demo-bar-wrap{flex:1;}
+.demo-pct{color:var(--text);width:34px;text-align:right;flex-shrink:0;}
+.gender-row{display:flex;height:22px;border-radius:3px;overflow:hidden;margin:8px 0;}
+.gender-m{background:var(--accent2);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:#000;font-weight:600;}
+.gender-f{background:var(--accent4);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:#fff;font-weight:600;}
+.gender-legend{display:flex;gap:14px;margin-top:7px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;}
+.gender-legend span{display:flex;align-items:center;gap:5px;color:var(--muted);}
+.dot{width:7px;height:7px;border-radius:50%;}
+
+/* TREND */
+.trend-months{display:flex;gap:3px;margin-top:4px;height:56px;align-items:flex-end;}
+.trend-month-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;}
+.trend-bar-inner{width:100%;border-radius:2px 2px 0 0;background:var(--accent2);opacity:0.8;transition:height 1s ease;height:0;min-height:2px;}
+.trend-month-label{font-family:'IBM Plex Mono',monospace;font-size:0.55rem;color:var(--muted);white-space:nowrap;}
+
+/* FB ADS / PINTEREST */
+.fb-ad-item{padding:11px 0;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:0.76rem;}
+.fb-ad-item:last-child{border-bottom:none;}
+.fb-ad-brand{font-weight:600;color:var(--text);margin-bottom:3px;}
+.fb-ad-copy{color:var(--muted);line-height:1.5;margin-bottom:5px;font-style:italic;}
+.fb-ad-meta{display:flex;gap:7px;flex-wrap:wrap;}
+.fb-ad-tag{font-size:0.65rem;padding:2px 7px;border-radius:2px;border:1px solid rgba(255,59,110,0.3);color:var(--accent4);background:rgba(255,59,110,0.06);}
+.pin-item{padding:9px 0;border-bottom:1px solid var(--border);}
+.pin-item:last-child{border-bottom:none;}
+.pin-title{color:var(--text);font-weight:600;font-size:0.83rem;margin-bottom:3px;}
+.pin-saves{color:var(--accent3);font-family:'IBM Plex Mono',monospace;font-size:0.68rem;}
+.platform-header{display:flex;align-items:center;gap:8px;font-size:0.88rem;font-weight:700;margin-bottom:13px;padding-bottom:11px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.plat-badge{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;padding:2px 7px;border-radius:2px;}
+.plat-google{background:rgba(0,136,255,0.15);color:var(--accent2);}
+.plat-pinterest{background:rgba(204,68,255,0.15);color:var(--accent3);}
+.plat-fb{background:rgba(255,59,110,0.15);color:var(--accent4);}
+
+/* INSIGHT */
+.insight-block{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text);line-height:1.8;white-space:pre-wrap;}
+
+/* EXPORT */
+.export-row{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;}
+.btn-export{background:transparent;border:1px solid var(--border);color:var(--muted);padding:11px 20px;border-radius:4px;font-family:'Syne',sans-serif;font-weight:600;font-size:0.83rem;cursor:pointer;transition:all 0.2s;}
+.btn-export:hover{border-color:var(--accent);color:var(--accent);}
+.error-box{background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.3);border-radius:4px;padding:15px 18px;font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--warn);display:none;margin-bottom:20px;}
+.error-box.visible{display:block;}
+
+/* SETTINGS MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 10000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+.modal-overlay.visible { display: flex; opacity: 1; }
+.modal-box { background: var(--surface); border: 1px solid var(--border); width: 480px; max-width: 90vw; border-radius: 12px; padding: 32px; box-shadow: 0 32px 64px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s; }
+.modal-overlay.visible .modal-box { transform: translateY(0); }
+.modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.modal-title svg { stroke: var(--accent); width: 20px; height: 20px; }
+.modal-desc { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+.settings-field { margin-bottom: 20px; }
+.demo-toggle-wrap { display: flex; align-items: center; justify-content: space-between; background: rgba(0,255,136,0.03); border: 1px solid rgba(0,255,136,0.1); padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; }
+.toggle-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+.switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--border); transition: .4s; border-radius: 22px; }
+.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--accent); }
+input:checked + .slider:before { transform: translateX(22px); }
+.modal-btns { display: flex; gap: 12px; margin-top: 24px; }
+.btn-save { flex: 1; background: var(--accent); color: #000; border: none; padding: 12px; border-radius: 4px; font-weight: 700; cursor: pointer; }
+.btn-close { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 12px; border-radius: 4px; cursor: pointer; }
+.nav-icon-btn { background: transparent; border: 1px solid var(--border); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+.nav-icon-btn:hover { border-color: var(--accent); }
+.nav-icon-btn svg { width: 16px; height: 16px; stroke: var(--muted); }
+.nav-icon-btn:hover svg { stroke: var(--accent); }
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 650px) {
+  header { padding: 15px 20px; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .header-right { width: 100%; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .logo { font-size: 1.15rem; width: 100%; text-align: center; margin-bottom: 4px; }
+  .logo sub { display: none; }
+  .badge, .dual-badge { display: none; } /* Hide secondary badges on mobile to save space */
+  .demo-badge { margin-right: 0; font-size: 0.55rem; padding: 3px 8px; }
+  
+  main { padding: 32px 18px 60px; }
+  h1 { font-size: 1.7rem; text-align: center; margin-bottom: 15px; }
+  .subtitle { font-size: 0.8rem; text-align: center; margin-bottom: 30px; line-height: 1.5; }
+  
+  .search-box { flex-direction: column; gap: 10px; }
+  .search-box input { width: 100%; padding: 14px; font-size: 0.85rem; }
+  .btn-analyze { width: 100%; padding: 14px; font-size: 0.85rem; }
+  
+  .progress-msg { font-size: 0.68rem; }
+  .phase-label { font-size: 0.55rem; }
+  
+  .dual-header { flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+  .score-pill { width: 100%; text-align: center; }
+  .consensus-banner { flex-direction: column; text-align: center; padding: 16px; gap: 8px; }
+  .consensus-pct { font-size: 1.4rem; }
+  
+  .compare-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .compare-label { width: 100%; text-align: left; }
+  .synth-val { text-align: right; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 4px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN SCREEN ═══════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Market<span>Scout</span> <sub>DUAL·AI</sub></div>
+    <div class="login-tagline" id="lt_tagline">// PLATAFORMA DE INTELIGENCIA DE MERCADO</div>
+    <div class="login-divider"></div>
+
+    <div class="login-lang-row">
+      <button class="login-lang-btn active" id="llES" onclick="setLoginLang('es')">ES</button>
+      <button class="login-lang-btn" id="llEN" onclick="setLoginLang('en')">EN</button>
+    </div>
+
+    <div class="login-dots">
+      <div class="login-dot"></div>
+      <div class="login-dot"></div>
+      <div class="login-dot"></div>
+    </div>
+
+    <div class="login-error" id="loginError">❌ <span id="loginErrorMsg">Usuario o contraseña incorrectos</span></div>
+
+    <div class="login-field">
+      <label class="login-label" id="lt_user">USUARIO</label>
+      <div class="login-input-wrap">
+        <input class="login-input" type="text" id="loginUser" autocomplete="username" placeholder="admin">
+        <svg class="login-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="login-field">
+      <label class="login-label" id="lt_pass">CONTRASEÑA</label>
+      <div class="login-input-wrap">
+        <input class="login-input" type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••">
+        <svg class="login-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+    </div>
+
+    <button class="login-btn" onclick="doLogin()">
+      <div class="login-btn-inner">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        <span id="lt_btnLogin">ENTRAR</span>
+      </div>
+    </button>
+
+    <div class="login-footer" id="lt_footer">MarketScout DUAL·AI · Powered by Anthropic Claude</div>
+  </div>
+</div>
+
+<!-- ═══════════ APP ═══════════ -->
+<div id="appWrapper">
+<header>
+  <div class="logo">Market<span>Scout</span> <sub>DUAL·AI</sub></div>
+  <div class="header-right">
+    <div id="demoBadge" class="demo-badge">MODO DEMO ACTIVO</div>
+    <div class="dual-badge">⚡ SONNET + OPUS</div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btnES" onclick="setLang('es')">ES</button>
+      <div class="lang-div"></div>
+      <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+    </div>
+    <div class="badge">IA · PRO</div>
+    <button class="power-btn on" id="powerBtn" onclick="togglePower()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/>
+      </svg>
+    </button>
+    <div class="header-btns">
+      <button class="history-btn" onclick="openHistory()" title="Historial">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </button>
+      <button class="nav-icon-btn" onclick="openSettings()" title="Configuración">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="off-overlay" id="offOverlay" onclick="togglePower()" style="cursor: pointer;">
+  <div class="off-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg></div>
+  <div class="off-text" id="offText">SISTEMA APAGADO</div>
+  <div class="off-hint" id="offHint">// pulsa en cualquier lugar para reactivar</div>
+</div>
+<div class="copy-popup" id="copyPopup">COPIADO</div>
+
+<main>
+  <h1 id="mainTitle">Estudio de mercado<br>con <em>doble inteligencia artificial</em></h1>
+  <p class="subtitle" id="mainSubtitle">// Sonnet + Opus analizan en paralelo → síntesis con fiabilidad verificada</p>
+
+  <div class="search-box">
+    <input type="text" id="nicheInput" placeholder="ej: sillas ergonómicas, cremas naturales, software de facturación..."/>
+    <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">Analizar →</button>
+  </div>
+
+  <!-- BARRA DE PROGRESO 3 FASES -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-phases">
+      <div class="phase" id="phase1">
+        <div class="phase-dot">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <div class="phase-label" id="ph1label">FASE 1</div>
+        <div class="phase-model" id="ph1model">claude-sonnet</div>
+      </div>
+      <div class="phase" id="phase2">
+        <div class="phase-dot">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <div class="phase-label" id="ph2label">FASE 2</div>
+        <div class="phase-model" id="ph2model">claude-opus</div>
+      </div>
+      <div class="phase" id="phase3">
+        <div class="phase-dot">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <div class="phase-label" id="ph3label">FASE 3</div>
+        <div class="phase-model" id="ph3model">síntesis·ia</div>
+      </div>
+    </div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-msg" id="progressMsg"></div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+  <div id="results"></div>
+</main>
+
+<script>
+// ══════════════════════════════════════════════
+// SETTINGS & DEMO MODE
+// ══════════════════════════════════════════════
+let config = {
+  apiKey: localStorage.getItem('ms_api_key') || '',
+  demoMode: localStorage.getItem('ms_demo_mode') === 'true'
+};
+
+function openSettings() {
+  document.getElementById('apiKeyInput').value = config.apiKey;
+  document.getElementById('demoToggle').checked = config.demoMode;
+  document.getElementById('settingsModal').classList.add('visible');
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('visible');
+}
+function saveSettings() {
+  config.apiKey = document.getElementById('apiKeyInput').value.trim();
+  config.demoMode = document.getElementById('demoToggle').checked;
+  localStorage.setItem('ms_api_key', config.apiKey);
+  localStorage.setItem('ms_demo_mode', config.demoMode);
+  updateDemoBadge();
+  closeSettings();
+}
+function toggleDemoMode() {
+  config.demoMode = document.getElementById('demoToggle').checked;
+}
+function updateDemoBadge() {
+  const badge = document.getElementById('demoBadge');
+  if (config.demoMode) badge.classList.add('visible');
+  else badge.classList.remove('visible');
+}
+// Init badge on load
+window.addEventListener('DOMContentLoaded', () => {
+  updateDemoBadge();
+  // Check if we are logged in to show/hide badge
+  const checkLogin = setInterval(() => {
+    if (document.getElementById('appWrapper').classList.contains('visible')) {
+      updateDemoBadge();
+      clearInterval(checkLogin);
+    }
+  }, 500);
+});
+
+function getMockData(niche) {
+  const lucky = Math.random() > 0.5;
+  return {
+    nicho: niche,
+    puntuacion_oportunidad: lucky ? 88 : 42,
+    nivel_competencia: lucky ? "Baja" : "Alta",
+    demanda: lucky ? 92 : 35,
+    rentabilidad: lucky ? 85 : 28,
+    facilidad_entrada: lucky ? 78 : 15,
+    tendencia: lucky ? "Creciente" : "Decreciente",
+    ticket_medio_estimado: lucky ? "45€ - 120€" : "10€ - 25€",
+    sonnet_demanda: lucky ? 90 : 40, opus_demanda: lucky ? 94 : 30,
+    sonnet_rentabilidad: lucky ? 82 : 32, opus_rentabilidad: lucky ? 88 : 24,
+    sonnet_facilidad: lucky ? 75 : 20, opus_facilidad: lucky ? 81 : 10,
+    sonnet_oportunidad: lucky ? 85 : 45, opus_oportunidad: lucky ? 91 : 39,
+    consenso_pct: lucky ? 94 : 62,
+    estrellas_fiabilidad: lucky ? 5 : 2,
+    divergencias: lucky ? [] : ["Opus prevé mayor saturación que Sonnet", "Diferencia de ticket medio (>20%)"],
+    palabras_clave: ["comprar "+niche, niche+" mejor precio", niche+" online", niche+" opiniones", "donde comprar "+niche],
+    competidores: [
+      {nombre: "Market Leader X", web: true, tipo: "lider"},
+      {nombre: "Local Shop Y", web: false, tipo: "local"},
+      {nombre: "New Startup Z", web: true, tipo: "startup"}
+    ],
+    leads_potenciales: [
+      {nombre: "Distribuidora Alpha", sector: "Retail", email_estimado: "info@alpha.com", tiene_web: true, oportunidad: "Web desactualizada"},
+      {nombre: "Global Logistics", sector: "Logística", email_estimado: "sales@global.com", tiene_web: false, oportunidad: "Sin presencia digital"}
+    ],
+    hoja_de_ruta: lucky ? {
+      corto_plazo: "Lanzamiento de campaña en Facebook enfocada en beneficios clave.",
+      medio_plazo: "Optimización SEO y creación de contenido en Pinterest para tráfico orgánico.",
+      largo_plazo: "Expansión a nuevos mercados internacionales y automatización de ventas."
+    } : {
+      corto_plazo: "Testeo A/B con presupuesto mínimo para validar interés real.",
+      medio_plazo: "Búsqueda de proveedores con mejores costes para aumentar margen.",
+      largo_plazo: "Pivote a nicho adyacente si los KPis de conversión son bajos."
+    },
+    google_trends: {
+      nivel_busqueda: lucky ? 85 : 30,
+      pico_estacional: "Noviembre",
+      tendencia_12m: [20,25,30,45,60,80,95,90,70,50,40,35],
+      meses_labels: ["A","M","J","J","A","S","O","N","D","E","F","M"],
+      terminos_relacionados: [niche+" barato", niche+" 2024", "ofertas "+niche]
+    },
+    audiencia: {
+      sexo_masculino_pct: lucky ? 40 : 70,
+      sexo_femenino_pct: lucky ? 60 : 30,
+      grupos_edad: [
+        {rango: "18-24", pct: 15}, {rango: "25-34", pct: 35}, {rango: "35-44", pct: 25}, {rango: "45-54", pct: 15}, {rango: "55+", pct: 10}
+      ],
+      perfil_comprador: lucky ? "Mujer 25-45 interesada en calidad y sostenibilidad." : "Hombre 30-50 buscando eficiencia y precio."
+    },
+    pinterest_trends: {
+      popularidad: lucky ? 78 : 12,
+      tendencia: lucky ? "Creciendo" : "Estable",
+      pins_destacados: [{titulo: "Mejores "+niche, guardados_estimados: 12500}, {titulo: "Guía "+niche, guardados_estimados: 8400}],
+      categorias_pinterest: ["Hogar", "Estilo de vida", "Tecnología"]
+    },
+    facebook_ads: {
+      anuncios_activos: lucky,
+      nivel_inversion: lucky ? "Alto" : "Bajo",
+      marcas_anunciando: [{marca: "Competidor A", copy_estimado: "¡Oferta limitada!", tipo_anuncio: "Imagen", objetivo: "Ventas"}],
+      recomendacion_ad: lucky ? "Enfocarse en beneficios emocionales y video corto." : "No se recomienda inversión masiva inicial."
+    },
+    resumen_ejecutivo: lucky 
+      ? "Este nicho presenta una oportunidad excepcional. La demanda está en fase de crecimiento acelerado y el ticket medio permite márgenes saludables. Se recomienda entrada rápida con foco en SEO y Pinterest."
+      : "El mercado parece saturado o en declive. La rentabilidad es baja debido a la alta competencia en precios. Se desaconseja la inversión a menos que se tenga un diferenciador radical."
+  };
+}
+// ══════════════════════════════════════════════
+// i18n
+// ══════════════════════════════════════════════
+const i18n = {
+  es: {
+    title: 'Estudio de mercado<br>con <em>doble inteligencia artificial</em>',
+    subtitle: '// Sonnet + Opus analizan en paralelo → síntesis con fiabilidad verificada',
+    placeholder: 'ej: sillas ergonómicas, cremas naturales, software de facturación...',
+    btnAnalyze: 'Analizar →',
+    offText: 'SISTEMA APAGADO',
+    offHint: '// pulsa el botón de encendido para reactivar',
+    ph1label: 'ANÁLISIS SONNET', ph1model: 'claude-sonnet-4',
+    ph2label: 'ANÁLISIS OPUS',   ph2model: 'claude-opus-4',
+    ph3label: 'SÍNTESIS FINAL',  ph3model: 'verificación·ia',
+    msg1: 'Claude Sonnet analizando el nicho...', msg2: 'Claude Opus analizando de forma independiente...', msg3: 'Sintetizando y verificando ambos análisis...',
+    errorMsg: 'Error en el análisis. Inténtalo de nuevo.',
+    analysisLabel: 'Análisis Dual IA',
+    consensusHigh: '% de consenso entre ambas IAs — Alta fiabilidad',
+    consensusMid: '% de consenso entre ambas IAs — Fiabilidad moderada',
+    consensusLow: '% de consenso entre ambas IAs — Área de incertidumbre',
+    divergTitle: '⚠ DIVERGENCIAS DETECTADAS ENTRE IAs',
+    sectionMetrics: 'Métricas de mercado',
+    sectionCompare: 'Comparativa Sonnet vs Opus',
+    sectionAud: 'Audiencia · Sexo y Edad',
+    sectionGoogle: 'Google Trends · Búsquedas',
+    sectionPinterest: 'Pinterest Trends',
+    sectionFB: 'Facebook Ad Library',
+    sectionSummary: 'Resumen ejecutivo · Síntesis IA',
+    labelIndicators: '📊 Métricas síntesis',
+    labelCompetitors: '🏢 Competidores',
+    labelLeads: '🎯 Leads potenciales',
+    labelKeywords: '🔑 Palabras clave',
+    labelSex: '⚥ División por sexo', labelAge: '🎂 Por edad',
+    labelSummary: '🧠 Análisis final verificado',
+    demanda: 'Demanda', rentabilidad: 'Rentabilidad', facilidad: 'Facilidad entrada',
+    competencia: 'Competencia', tendencia: 'Tendencia', ticket: 'Ticket',
+    opportunity: 'Oportunidad',
+    hasWeb: '✓ Web', noWeb: '✗ Sin web',
+    adsActive: '● Anuncios activos', adsNone: '○ Sin anuncios',
+    investLevel: 'Inversión estimada',
+    searchEvo: 'Evolución de búsquedas — últimos 12 meses',
+    relatedTerms: 'TÉRMINOS RELACIONADOS',
+    popularity: 'Popularidad', peak: 'Pico',
+    trendingPins: 'PINS TENDENCIA', categories: 'CATEGORÍAS',
+    savedEst: 'guardados est.',
+    men: 'Hombres', women: 'Mujeres', buyer: '👤',
+    exportExcel: 'Exportar Excel', exportCopy: 'Copiar contenido', newAnalysis: '+ Nuevo análisis',
+    reliabilityLabel: 'Fiabilidad',
+    stars5: 'Consenso total', stars4: 'Alta fiabilidad', stars3: 'Buena fiabilidad', stars2: 'Verificar datos',
+    promptLang: 'español',
+    roadmapTitle: 'Hoja de Ruta Estratégica',
+    phase1: 'Fase 1: Validación', phase2: 'Fase 2: Lanzamiento MVP', phase3: 'Fase 3: Escalamiento',
+    historyTitle: 'Historial de Análisis',
+    noHistory: 'No hay análisis recientes.',
+    exportMD: 'Exportar Reporte (.md)'
+  },
+  en: {
+    title: 'Market research<br>with <em>dual artificial intelligence</em>',
+    subtitle: '// Sonnet + Opus analyze in parallel → synthesis with verified reliability',
+    placeholder: 'e.g: ergonomic chairs, natural creams, invoicing software...',
+    btnAnalyze: 'Analyze →',
+    offText: 'SYSTEM OFF',
+    offHint: '// click anywhere to restart',
+    ph1label: 'SONNET ANALYSIS', ph1model: 'claude-sonnet-4',
+    ph2label: 'OPUS ANALYSIS',   ph2model: 'claude-opus-4',
+    ph3label: 'FINAL SYNTHESIS', ph3model: 'ai·verification',
+    msg1: 'Claude Sonnet analyzing the niche...', msg2: 'Claude Opus analyzing independently...', msg3: 'Synthesizing and verifying both analyses...',
+    errorMsg: 'Analysis error. Please try again.',
+    analysisLabel: 'Dual AI Analysis',
+    consensusHigh: '% consensus between both AIs — High reliability',
+    consensusMid: '% consensus between both AIs — Moderate reliability',
+    consensusLow: '% consensus between both AIs — Uncertain area',
+    divergTitle: '⚠ DIVERGENCES DETECTED BETWEEN AIs',
+    sectionMetrics: 'Market Metrics',
+    sectionCompare: 'Sonnet vs Opus Comparison',
+    sectionAud: 'Audience · Gender & Age',
+    sectionGoogle: 'Google Trends · Searches',
+    sectionPinterest: 'Pinterest Trends',
+    sectionFB: 'Facebook Ad Library',
+    sectionSummary: 'Executive Summary · AI Synthesis',
+    labelIndicators: '📊 Synthesis metrics',
+    labelCompetitors: '🏢 Competitors',
+    labelLeads: '🎯 Potential leads',
+    labelKeywords: '🔑 Keywords',
+    labelSex: '⚥ Gender split', labelAge: '🎂 By age',
+    labelSummary: '🧠 Verified final analysis',
+    demanda: 'Demand', rentabilidad: 'Profitability', facilidad: 'Ease of entry',
+    competencia: 'Competition', tendencia: 'Trend', ticket: 'Avg ticket',
+    opportunity: 'Opportunity',
+    hasWeb: '✓ Website', noWeb: '✗ No website',
+    adsActive: '● Active ads', adsNone: '○ No active ads',
+    investLevel: 'Estimated investment',
+    searchEvo: 'Search evolution — last 12 months',
+    relatedTerms: 'RELATED TERMS',
+    popularity: 'Popularity', peak: 'Peak',
+    trendingPins: 'TRENDING PINS', categories: 'CATEGORIES',
+    savedEst: 'saves est.',
+    men: 'Men', women: 'Women', buyer: '👤',
+    exportExcel: 'Export Excel', exportCopy: 'Copy content', newAnalysis: '+ New analysis',
+    reliabilityLabel: 'Reliability',
+    stars5: 'Full consensus', stars4: 'High reliability', stars3: 'Good reliability', stars2: 'Verify data',
+    promptLang: 'English',
+    roadmapTitle: 'Strategic Roadmap',
+    phase1: 'Phase 1: Validation', phase2: 'Phase 2: MVP Launch', phase3: 'Phase 3: Scaling',
+    historyTitle: 'Analysis History',
+    noHistory: 'No recent analyses found.',
+    exportMD: 'Export Report (.md)'
+  }
+};
+
+let currentLang = 'es';
+let powered = true;
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btnES').classList.toggle('active', lang==='es');
+  document.getElementById('btnEN').classList.toggle('active', lang==='en');
+  const t = i18n[lang];
+  document.getElementById('mainTitle').innerHTML = t.title;
+  document.getElementById('mainSubtitle').textContent = t.subtitle;
+  document.getElementById('nicheInput').placeholder = t.placeholder;
+  document.getElementById('analyzeBtn').textContent = t.btnAnalyze;
+  document.getElementById('ph1label').textContent = t.ph1label;
+  document.getElementById('ph1model').textContent = t.ph1model;
+  document.getElementById('ph2label').textContent = t.ph2label;
+  document.getElementById('ph2model').textContent = t.ph2model;
+  document.getElementById('ph3label').textContent = t.ph3label;
+  document.getElementById('ph3model').textContent = t.ph3model;
+  if (window._lastData) renderResults(window._lastData);
+}
+
+function togglePower() {
+  powered = !powered;
+  const btn = document.getElementById('powerBtn');
+  const overlay = document.getElementById('offOverlay');
+  const t = i18n[currentLang];
+  document.getElementById('offText').textContent = t.offText;
+  document.getElementById('offHint').textContent = t.offHint;
+  btn.classList.toggle('on', powered);
+  btn.classList.toggle('off', !powered);
+  overlay.classList.toggle('visible', !powered);
+}
+
+// ══════════════════════════════════════════════
+// PROGRESS BAR
+// ══════════════════════════════════════════════
+function setPhase(n, pct, msg) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('phase'+i);
+    el.classList.remove('running','done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('running');
+  });
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressMsg').textContent = msg;
+}
+
+// ══════════════════════════════════════════════
+// API CALL
+// ══════════════════════════════════════════════
+function buildPrompt(niche, model, lang) {
+  const role = model === 'sonnet'
+    ? 'You are Claude Sonnet, a precise market research analyst. Be data-focused and specific.'
+    : 'You are Claude Opus, a strategic market research expert. Provide deep insights and nuanced analysis.';
+  return role + ' Analyze this niche/product: "' + niche + '". Language for all text values: ' + lang + '.\n\n' +
+    'Respond ONLY with valid JSON (no backticks, no markdown):\n' +
+    '{"nicho":"clean niche name",' +
+    '"puntuacion_oportunidad":number1to100,' +
+    '"nivel_competencia":"Baja" or "Media" or "Alta",' +
+    '"demanda":number1to100,' +
+    '"rentabilidad":number1to100,' +
+    '"facilidad_entrada":number1to100,' +
+    '"tendencia":"Creciente" or "Estable" or "Decreciente",' +
+    '"ticket_medio_estimado":"price range",' +
+    '"palabras_clave":["kw1","kw2","kw3","kw4","kw5"],' +
+    '"competidores":[{"nombre":"Co A","web":true,"tipo":"lider"},{"nombre":"Co B","web":false,"tipo":"local"},{"nombre":"Co C","web":true,"tipo":"mediana"},{"nombre":"Co D","web":false,"tipo":"pequena"},{"nombre":"Co E","web":true,"tipo":"startup"}],' +
+    '"leads_potenciales":[{"nombre":"Lead 1","sector":"s","email_estimado":"info@lead1.com","tiene_web":false,"oportunidad":"No digital presence"},{"nombre":"Lead 2","sector":"s","email_estimado":"hi@lead2.com","tiene_web":true,"oportunidad":"Outdated web"},{"nombre":"Lead 3","sector":"s","email_estimado":"contact@lead3.com","tiene_web":false,"oportunidad":"No ecommerce"}],' +
+    '"google_trends":{"nivel_busqueda":number1to100,"pico_estacional":"season","tendencia_12m":[n,n,n,n,n,n,n,n,n,n,n,n],"meses_labels":["A","M","J","J","A","S","O","N","D","E","F","M"],"terminos_relacionados":["t1","t2","t3","t4"]},' +
+    '"audiencia":{"sexo_masculino_pct":number,"sexo_femenino_pct":number,"grupos_edad":[{"rango":"18-24","pct":n},{"rango":"25-34","pct":n},{"rango":"35-44","pct":n},{"rango":"45-54","pct":n},{"rango":"55+","pct":n}],"perfil_comprador":"1 sentence"},' +
+    '"pinterest_trends":{"popularidad":number1to100,"tendencia":"Viral" or "Creciendo" or "Estable" or "Bajando","pins_destacados":[{"titulo":"pin1","guardados_estimados":number},{"titulo":"pin2","guardados_estimados":number},{"titulo":"pin3","guardados_estimados":number}],"categorias_pinterest":["c1","c2","c3"]},' +
+    '"facebook_ads":{"anuncios_activos":true or false,"nivel_inversion":"Bajo" or "Medio" or "Alto","marcas_anunciando":[{"marca":"Brand A","copy_estimado":"short copy","tipo_anuncio":"Video" or "Imagen" or "Carrusel","objetivo":"Ventas" or "Branding" or "Leads"},{"marca":"Brand B","copy_estimado":"short copy","tipo_anuncio":"Imagen","objetivo":"Ventas"},{"marca":"Brand C","copy_estimado":"short copy","tipo_anuncio":"Video","objetivo":"Branding"}],"recomendacion_ad":"concrete recommendation"},' +
+    '"resumen_ejecutivo":"3-4 sentences with market analysis and recommendations."}';
+}
+
+function buildSynthesisPrompt(niche, r1, r2, lang) {
+  const s = r1, o = r2;
+  return 'Senior market analyst. Synthesize two independent AI analyses of "' + niche + '". Respond in ' + lang + '. ONLY valid JSON, no backticks.\n\n' +
+    'SONNET: oportunidad=' + s.puntuacion_oportunidad + ',demanda=' + s.demanda + ',rentabilidad=' + s.rentabilidad + ',facilidad=' + s.facilidad_entrada + ',competencia=' + s.nivel_competencia + ',tendencia=' + s.tendencia + ',ticket=' + s.ticket_medio_estimado + '\n' +
+    'OPUS: oportunidad=' + o.puntuacion_oportunidad + ',demanda=' + o.demanda + ',rentabilidad=' + o.rentabilidad + ',facilidad=' + o.facilidad_entrada + ',competencia=' + o.nivel_competencia + ',tendencia=' + o.tendencia + ',ticket=' + o.ticket_medio_estimado + '\n\n' +
+    'Rules: average numeric fields; consenso_pct=100 if identical, lower if diverge; estrellas_fiabilidad 5=consenso>=85, 4=>=70, 3=>=55, 2=below; divergencias only if difference>15 pts.\n\n' +
+    'JSON:\n{"nicho":"' + niche + '",' +
+    '"puntuacion_oportunidad":NUMBER,' +
+    '"nivel_competencia":"STRING",' +
+    '"demanda":NUMBER,"rentabilidad":NUMBER,"facilidad_entrada":NUMBER,' +
+    '"tendencia":"STRING","ticket_medio_estimado":"STRING",' +
+    '"sonnet_demanda":' + (s.demanda||0) + ',"opus_demanda":' + (o.demanda||0) + ',' +
+    '"sonnet_rentabilidad":' + (s.rentabilidad||0) + ',"opus_rentabilidad":' + (o.rentabilidad||0) + ',' +
+    '"sonnet_facilidad":' + (s.facilidad_entrada||0) + ',"opus_facilidad":' + (o.facilidad_entrada||0) + ',' +
+    '"sonnet_oportunidad":' + (s.puntuacion_oportunidad||0) + ',"opus_oportunidad":' + (o.puntuacion_oportunidad||0) + ',' +
+    '"consenso_pct":NUMBER,"estrellas_fiabilidad":NUMBER,' +
+    '"divergencias":["string or empty"],' +
+    '"palabras_clave":["k1","k2","k3","k4","k5","k6"],' +
+    '"competidores":[{"nombre":"NAME","web":true,"tipo":"lider"},{"nombre":"NAME","web":false,"tipo":"local"},{"nombre":"NAME","web":true,"tipo":"mediana"},{"nombre":"NAME","web":false,"tipo":"pequena"},{"nombre":"NAME","web":true,"tipo":"startup"}],' +
+    '"leads_potenciales":[{"nombre":"NAME","sector":"S","email_estimado":"e@x.com","tiene_web":false,"oportunidad":"OPP"},{"nombre":"NAME","sector":"S","email_estimado":"e@x.com","tiene_web":true,"oportunidad":"OPP"},{"nombre":"NAME","sector":"S","email_estimado":"e@x.com","tiene_web":false,"oportunidad":"OPP"}],' +
+    '"google_trends":{"nivel_busqueda":N,"pico_estacional":"S","tendencia_12m":[N,N,N,N,N,N,N,N,N,N,N,N],"meses_labels":["A","M","J","J","A","S","O","N","D","E","F","M"],"terminos_relacionados":["t1","t2","t3","t4"]},' +
+    '"audiencia":{"sexo_masculino_pct":N,"sexo_femenino_pct":N,"grupos_edad":[{"rango":"18-24","pct":N},{"rango":"25-34","pct":N},{"rango":"35-44","pct":N},{"rango":"45-54","pct":N},{"rango":"55+","pct":N}],"perfil_comprador":"STRING"},' +
+    '"pinterest_trends":{"popularidad":N,"tendencia":"STRING","pins_destacados":[{"titulo":"S","guardados_estimados":N},{"titulo":"S","guardados_estimados":N},{"titulo":"S","guardados_estimados":N}],"categorias_pinterest":["c1","c2","c3"]},' +
+    '"facebook_ads":{"anuncios_activos":BOOL,"nivel_inversion":"STRING","marcas_anunciando":[{"marca":"S","copy_estimado":"S","tipo_anuncio":"Video","objetivo":"Ventas"},{"marca":"S","copy_estimado":"S","tipo_anuncio":"Imagen","objetivo":"Branding"},{"marca":"S","copy_estimado":"S","tipo_anuncio":"Carrusel","objetivo":"Leads"}],"recomendacion_ad":"STRING"},' +
+    '"hoja_de_ruta":{"corto_plazo":"S","medio_plazo":"S","largo_plazo":"S"},' +
+    '"resumen_ejecutivo":"STRING 3-4 sentences"}';
+}
+
+async function callAPI(model, prompt) {
+  if (config.demoMode) return {}; // Handled in analyze()
+  if (!config.apiKey) throw new Error('Falta API Key. Configúrala en ajustes.');
+  
+  const modelId = model === 'sonnet' ? 'claude-3-5-sonnet-20240620' : 'claude-3-opus-20240229';
+  
+  // Note: Direct browser calls fail CORS. We now use our local proxy.py to forward them securely.
+  const resp = await fetch('/api/anthropic', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-api-key': config.apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({ model: modelId, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = data.content.map(b => b.text || '').join('');
+  const clean = raw.replace(/```json|```/g, '').trim();
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No valid JSON found in response');
+  return JSON.parse(clean.slice(start, end + 1));
+}
+
+// ══════════════════════════════════════════════
+// MAIN ANALYZE
+// ══════════════════════════════════════════════
+async function analyze() {
+  const niche = document.getElementById('nicheInput').value.trim();
+  if (!niche) return;
+  const btn = document.getElementById('analyzeBtn');
+  const wrap = document.getElementById('progressWrap');
+  const results = document.getElementById('results');
+  const errorBox = document.getElementById('errorBox');
+  const t = i18n[currentLang];
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  results.classList.remove('visible');
+  errorBox.classList.remove('visible');
+  wrap.classList.add('active');
+  document.getElementById('progressFill').style.width = '0%';
+
+  try {
+    if (config.demoMode) {
+      await new Promise(r => setTimeout(r, 1000));
+      setPhase(1, 33, '✓ Sonnet completado (Demo Mode)');
+      await new Promise(r => setTimeout(r, 800));
+      setPhase(2, 66, '✓ Opus completado (Demo Mode)');
+      await new Promise(r => setTimeout(r, 800));
+      setPhase(3, 100, '✓ Síntesis completada (Demo Mode)');
+      await new Promise(r => setTimeout(r, 500));
+      wrap.classList.remove('active');
+      renderResults(getMockData(niche));
+      return;
+    }
+
+    // FASE 1 — Sonnet
+    setPhase(1, 5, t.msg1);
+    const r1 = await callAPI('sonnet', buildPrompt(niche, 'sonnet', t.promptLang));
+    setPhase(1, 33, '✓ Sonnet completado');
+    await new Promise(r => setTimeout(r, 400));
+
+    // FASE 2 — Opus
+    setPhase(2, 38, t.msg2);
+    const r2 = await callAPI('opus', buildPrompt(niche, 'opus', t.promptLang));
+    setPhase(2, 66, '✓ Opus completado');
+    await new Promise(r => setTimeout(r, 400));
+
+    // FASE 3 — Síntesis
+    setPhase(3, 72, t.msg3);
+    const synth = await callAPI('sonnet', buildSynthesisPrompt(niche, r1, r2, t.promptLang));
+    setPhase(3, 100, '✓ Síntesis completada');
+    await new Promise(r => setTimeout(r, 500));
+
+    wrap.classList.remove('active');
+    renderResults(synth);
+
+  } catch(err) {
+    errorBox.textContent = t.errorMsg + ' (' + err.message + ')';
+    errorBox.classList.add('visible');
+    wrap.classList.remove('active');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+}
+
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function starsHTML(n) {
+  let s = '';
+  for (let i=1;i<=5;i++) s += i<=n ? '★' : '☆';
+  return s;
+}
+function starLabel(n, t) {
+  if (n>=5) return t.stars5;
+  if (n>=4) return t.stars4;
+  if (n>=3) return t.stars3;
+  return t.stars2;
+}
+function relClass(n) {
+  if (n>=5) return 'rel-5';
+  if (n>=4) return 'rel-4';
+  if (n>=3) return 'rel-3';
+  return 'rel-2';
+}
+// ══════════════════════════════════════════════
+// v3.0 CORE FUNCTIONS
+// ══════════════════════════════════════════════
+
+function drawRadarChart(s, o, syn) {
+  const canvas = document.getElementById('radarCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w/2;
+  const cy = h/2;
+  const radius = Math.min(cx, cy) - 25;
+  
+  const axes = ['Demanda', 'Rentabilidad', 'Facilidad'];
+  const data = [
+    { label: 'Sonnet', color: 'rgba(0, 224, 255, 0.4)', stroke: '#00e0ff', values: [s.demanda, s.rentabilidad, s.facilidad] },
+    { label: 'Opus', color: 'rgba(255, 184, 0, 0.4)', stroke: '#ffb800', values: [o.demanda, o.rentabilidad, o.facilidad] },
+    { label: 'Synthesis', color: 'rgba(0, 255, 136, 0.6)', stroke: '#00ff88', values: [syn.demanda, syn.rentabilidad, syn.facilidad] }
+  ];
+
+  ctx.clearRect(0,0,w,h);
+  
+  // Draw Background Grid
+  ctx.strokeStyle = '#2a2a3a';
+  ctx.lineWidth = 1;
+  [0.5, 1].forEach(lvl => {
+    ctx.beginPath();
+    for(let i=0; i<3; i++) {
+      const angle = (i * 120 - 90) * Math.PI / 180;
+      const x = cx + radius * lvl * Math.cos(angle);
+      const y = cy + radius * lvl * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  });
+
+  // Draw Axes
+  axes.forEach((txt, i) => {
+    const angle = (i * 120 - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+    ctx.stroke();
+    
+    // Labels
+    ctx.fillStyle = '#888';
+    ctx.font = '10px "IBM Plex Mono"';
+    ctx.textAlign = 'center';
+    const lx = cx + (radius + 15) * Math.cos(angle);
+    const ly = cy + (radius + 15) * Math.sin(angle);
+    ctx.fillText(txt.toUpperCase(), lx, ly);
+  });
+
+  // Draw Data Shapes
+  data.forEach(d => {
+    ctx.beginPath();
+    d.values.forEach((v, i) => {
+      const val = (v || 0) / 100;
+      const angle = (i * 120 - 90) * Math.PI / 180;
+      const x = cx + radius * val * Math.cos(angle);
+      const y = cy + radius * val * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = d.color;
+    ctx.fill();
+    ctx.strokeStyle = d.stroke;
+    ctx.lineWidth = d.label === 'Synthesis' ? 2 : 1;
+    ctx.stroke();
+  });
+}
+
+function saveToHistory(data) {
+  let history = JSON.parse(localStorage.getItem('scout_history') || '[]');
+  // Avoid duplicates
+  history = history.filter(h => h.nicho !== data.nicho);
+  history.unshift({ nicho: data.nicho, date: new Date().toLocaleString(), data: data });
+  if (history.length > 8) history.pop();
+  localStorage.setItem('scout_history', JSON.stringify(history));
+}
+
+function openHistory() {
+  const modal = document.getElementById('historyModal');
+  const list = document.getElementById('historyList');
+  const t = i18n[currentLang];
+  document.getElementById('ht_title').textContent = t.historyTitle;
+  
+  const history = JSON.parse(localStorage.getItem('scout_history') || '[]');
+  list.innerHTML = '';
+  
+  if (history.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;">' + t.noHistory + '</div>';
+  } else {
+    history.forEach((h, idx) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = '<div><div class="history-niche">' + h.nicho + '</div><div class="history-date">' + h.date + '</div></div>' + 
+                       '<div style="color:var(--accent);font-size:0.8rem">→</div>';
+      item.onclick = () => {
+        renderResults(h.data);
+        closeHistory();
+      };
+      list.appendChild(item);
+    });
+  }
+  modal.classList.add('visible');
+}
+
+function closeHistory() {
+  document.getElementById('historyModal').classList.remove('visible');
+}
+
+function exportMarkdown(d) {
+  const t = i18n[currentLang];
+  let md = `# MarketScout Report: ${d.nicho.toUpperCase()}\n\n`;
+  md += `**Date:** ${new Date().toLocaleString()}\n`;
+  md += `**Opportunity Score:** ${d.puntuacion_oportunidad}/100\n`;
+  md += `**AI Consensus:** ${d.consenso_pct}%\n\n`;
+  
+  md += `## 🏁 Strategic Roadmap\n`;
+  if(d.hoja_de_ruta) {
+    md += `### ${t.phase1}\n${d.hoja_de_ruta.corto_plazo}\n\n`;
+    md += `### ${t.phase2}\n${d.hoja_de_ruta.medio_plazo}\n\n`;
+    md += `### ${t.phase3}\n${d.hoja_de_ruta.largo_plazo}\n\n`;
+  }
+
+  md += `## 📊 Key Metrics\n`;
+  md += `- Demand: ${d.demanda}/100\n`;
+  md += `- Profitability: ${d.rentabilidad}/100\n`;
+  md += `- Ease of Entry: ${d.facilidad_entrada}/100\n`;
+  md += `- Competition Level: ${d.nivel_competencia}\n\n`;
+
+  md += `## 🏢 Competitors\n`;
+  d.competidores.forEach(c => md += `- ${c.nombre} (${c.tipo}) ${c.web ? '[Web]' : '[No Web]'}\n`);
+  
+  md += `\n## 🎯 Potential Leads\n`;
+  d.leads_potenciales.forEach(l => md += `- ${l.nombre}: ${l.oportunidad} (${l.email_estimado})\n`);
+
+  md += `\n---\n*Report generated by MarketScout DUAL-AI (Sonnet + Opus)*`;
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `MarketScout_${d.nicho.replace(/\s+/g, '_')}.md`;
+  a.click();
+}
+
+function renderResults(d) {
+  const t = i18n[currentLang];
+  const gt  = d.google_trends;
+  const aud = d.audiencia;
+  const pin = d.pinterest_trends;
+  const fb  = d.facebook_ads;
+  const stars = d.estrellas_fiabilidad || 3;
+  const consenso = d.consenso_pct || 75;
+  const scoreClass = d.puntuacion_oportunidad >= 60 ? 'score-high' : 'score-mid';
+
+  // Consensus banner
+  let consCls = consenso >= 80 ? 'consensus-high' : consenso >= 60 ? 'consensus-mid' : 'consensus-low';
+  let consMsg = consenso >= 80 ? t.consensusHigh : consenso >= 60 ? t.consensusMid : t.consensusLow;
+
+  // Divergencias
+  let divergHTML = '';
+  if (d.divergencias && d.divergencias.length > 0 && d.divergencias[0]) {
+    const items = d.divergencias.filter(x => x && x.length > 2).map(x => '<div class="diverge-item">⚡ ' + x + '</div>').join('');
+    if (items) divergHTML = '<div class="diverge-block"><div class="diverge-title">' + t.divergTitle + '</div>' + items + '</div>';
+  }
+
+  // Compare bars
+  const compareHTML = ['demanda','rentabilidad','facilidad'].map((k, i) => {
+    const labels = [t.demanda, t.rentabilidad, t.facilidad];
+    const sKeys = ['sonnet_demanda','sonnet_rentabilidad','sonnet_facilidad'];
+    const oKeys = ['opus_demanda','opus_rentabilidad','opus_facilidad'];
+    const sv = d[sKeys[i]] || 0;
+    const ov = d[oKeys[i]] || 0;
+    const synv = d[k] || Math.round((sv+ov)/2);
+    return '<div class="compare-metric">' +
+      '<div class="compare-row"><span class="compare-label">' + labels[i] + '</span>' +
+      '<div class="compare-bars">' +
+      '<div class="cbar-wrap"><span class="cbar-model" style="color:var(--accent2)">S</span><div class="cbar-track"><div class="cbar-fill s" data-val="'+sv+'"></div></div><span class="cbar-val s">'+sv+'</span></div>' +
+      '<div class="cbar-wrap"><span class="cbar-model" style="color:var(--gold)">O</span><div class="cbar-track"><div class="cbar-fill o" data-val="'+ov+'"></div></div><span class="cbar-val o">'+ov+'</span></div>' +
+      '</div><span class="synth-val">⌀'+synv+'</span></div>' +
+      '</div>';
+  }).join('');
+
+  // Competitors
+  const compHTML = d.competidores.map(c =>
+    '<div class="competitor"><span class="comp-name">'+c.nombre+' <span style="color:var(--muted);font-size:0.68rem">('+c.tipo+')</span></span>' +
+    '<span class="comp-tag '+(c.web?'tag-web':'tag-noweb')+'">'+(c.web?t.hasWeb:t.noWeb)+'</span></div>'
+  ).join('');
+
+  // Leads
+  const leadsHTML = d.leads_potenciales.map(l =>
+    '<div class="lead-item"><div class="lead-name">'+l.nombre+'</div>' +
+    '<div class="lead-detail">'+l.sector+' · '+l.oportunidad+'</div>' +
+    '<div class="lead-email">✉ '+l.email_estimado+'</div></div>'
+  ).join('');
+
+  // Keywords
+  const kwHTML = d.palabras_clave.map(k => '<span class="tag">'+k+'</span>').join('');
+
+  // Trend bars
+  const maxV = Math.max(...gt.tendencia_12m, 1);
+  const trendHTML = gt.tendencia_12m.map((v,i) => {
+    const pct = Math.round((v/maxV)*100);
+    return '<div class="trend-month-col"><div class="trend-bar-inner" data-pct="'+pct+'" style="height:0"></div><div class="trend-month-label">'+((gt.meses_labels||[])[i]||'')+'</div></div>';
+  }).join('');
+
+  // Age
+  const ageHTML = aud.grupos_edad.map(g =>
+    '<div class="demo-row"><span class="demo-label">'+g.rango+'</span>' +
+    '<div class="demo-bar-wrap"><div class="bar-track"><div class="bar-fill purple" data-val="'+g.pct+'"></div></div></div>' +
+    '<span class="demo-pct">'+g.pct+'%</span></div>'
+  ).join('');
+
+  // Pinterest
+  const pinsHTML = pin.pins_destacados.map(p =>
+    '<div class="pin-item"><div class="pin-title">'+p.titulo+'</div>' +
+    '<div class="pin-saves">📌 ~'+Number(p.guardados_estimados).toLocaleString()+' '+t.savedEst+'</div></div>'
+  ).join('');
+  const pinCatsHTML = pin.categorias_pinterest.map(c => '<span class="tag pink">'+c+'</span>').join('');
+  const gtTermsHTML = gt.terminos_relacionados.map(x => '<span class="tag google">'+x+'</span>').join('');
+
+  // FB
+  const fbAdsHTML = fb.marcas_anunciando.map(a =>
+    '<div class="fb-ad-item"><div class="fb-ad-brand">'+a.marca+'</div>' +
+    '<div class="fb-ad-copy">"'+a.copy_estimado+'"</div>' +
+    '<div class="fb-ad-meta"><span class="fb-ad-tag">'+a.tipo_anuncio+'</span><span class="fb-ad-tag">'+a.objetivo+'</span></div></div>'
+  ).join('');
+  const fbColor = fb.anuncios_activos ? 'var(--accent)' : 'var(--warn)';
+  const fbStatus = fb.anuncios_activos ? t.adsActive : t.adsNone;
+
+  const html =
+    '<div class="dual-header">' +
+      '<div>' +
+        '<div class="dual-title">'+t.analysisLabel+': <span>'+d.nicho+'</span></div>' +
+        '<div class="stars-row" style="margin-top:8px">' +
+          '<span class="stars">'+starsHTML(stars)+'</span>' +
+          '<span class="reliability-tag '+relClass(stars)+'">'+starLabel(stars,t)+'</span>' +
+          '<span class="stars-label">'+t.reliabilityLabel+'</span>' +
+        '</div>' +
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' +
+          '<span class="model-pill pill-sonnet">Claude Sonnet 4</span>' +
+          '<span class="model-pill pill-opus">Claude Opus 4</span>' +
+          '<span class="model-pill pill-synth">⚡ Síntesis IA</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="score-pill '+scoreClass+'">'+t.opportunity+': '+d.puntuacion_oportunidad+'/100</div>' +
+    '</div>' +
+
+    '<div class="consensus-banner '+consCls+'">' +
+      '<span class="consensus-pct">'+consenso+'%</span>' +
+      '<span class="consensus-text">'+consMsg+'</span>' +
+    '</div>' +
+
+    divergHTML +
+
+    '<div class="section-label">'+t.sectionMetrics+'</div>' +
+    '<div class="grid-2">' +
+      '<div class="card"><div class="card-label">'+t.labelIndicators+'</div>' +
+        '<div class="metric"><div class="metric-row"><span class="metric-name">'+t.demanda+'</span><span class="metric-val">'+d.demanda+'/100</span></div><div class="bar-track"><div class="bar-fill" data-val="'+d.demanda+'"></div></div></div>' +
+        '<div class="metric"><div class="metric-row"><span class="metric-name">'+t.rentabilidad+'</span><span class="metric-val">'+d.rentabilidad+'/100</span></div><div class="bar-track"><div class="bar-fill blue" data-val="'+d.rentabilidad+'"></div></div></div>' +
+        '<div class="metric"><div class="metric-row"><span class="metric-name">'+t.facilidad+'</span><span class="metric-val">'+d.facilidad_entrada+'/100</span></div><div class="bar-track"><div class="bar-fill orange" data-val="'+d.facilidad_entrada+'"></div></div></div>' +
+        '<div style="margin-top:14px;font-family:\'IBM Plex Mono\',monospace;font-size:0.72rem;display:flex;flex-wrap:wrap;gap:10px">' +
+          '<span style="color:var(--muted)">'+t.competencia+': <span style="color:var(--text)">'+d.nivel_competencia+'</span></span>' +
+          '<span style="color:var(--muted)">'+t.tendencia+': <span style="color:var(--accent)">'+d.tendencia+'</span></span>' +
+          '<span style="color:var(--muted)">'+t.ticket+': <span style="color:var(--text)">'+d.ticket_medio_estimado+'</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card"><div class="card-label">'+t.labelCompetitors+'</div>'+compHTML+'</div>' +
+    '</div>' +
+
+    '<div class="section-label">'+t.sectionCompare+'</div>' +
+    '<div class="card-full">' +
+      '<div style="display:flex;gap:16px;margin-bottom:14px;font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;justify-content:center;">' +
+        '<span><span style="color:var(--accent2)">■</span> Sonnet</span>' +
+        '<span><span style="color:var(--gold)">■</span> Opus</span>' +
+        '<span><span style="color:var(--accent)">■</span> Synthesis</span>' +
+      '</div>' +
+      '<div class="radar-wrap"><canvas id="radarCanvas" width="300" height="180" class="radar-canvas"></canvas></div>' +
+      compareHTML +
+    '</div>' +
+
+    '<div class="section-label">'+t.roadmapTitle+'</div>' +
+    '<div class="card-full roadmap-card">' +
+      '<div class="roadmap-step"><div class="roadmap-phase">'+t.phase1+'</div><div class="roadmap-text">'+(d.hoja_de_ruta?d.hoja_de_ruta.corto_plazo:'...')+'</div></div>' +
+      '<div class="roadmap-step"><div class="roadmap-phase">'+t.phase2+'</div><div class="roadmap-text">'+(d.hoja_de_ruta?d.hoja_de_ruta.medio_plazo:'...')+'</div></div>' +
+      '<div class="roadmap-step"><div class="roadmap-phase">'+t.phase3+'</div><div class="roadmap-text">'+(d.hoja_de_ruta?d.hoja_de_ruta.largo_plazo:'...')+'</div></div>' +
+    '</div>' +
+
+    '<div class="grid-2">' +
+      '<div class="card"><div class="card-label">'+t.labelLeads+'</div>'+leadsHTML+'</div>' +
+      '<div class="card"><div class="card-label">'+t.labelKeywords+'</div><div class="tag-list">'+kwHTML+'</div></div>' +
+    '</div>' +
+
+    '<div class="section-label">'+t.sectionGoogle+'</div>' +
+    '<div class="card-full">' +
+      '<div class="platform-header"><span>📈</span> Google Trends <span class="plat-badge plat-google">BÚSQUEDAS</span>' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:var(--muted);margin-left:auto">'+t.popularity+': '+gt.nivel_busqueda+'/100 · '+t.peak+': '+gt.pico_estacional+'</span>' +
+      '</div>' +
+      '<div class="metric" style="margin-bottom:12px"><div class="bar-track" style="height:5px"><div class="bar-fill blue" data-val="'+gt.nivel_busqueda+'"></div></div></div>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:8px">'+t.searchEvo+'</div>' +
+      '<div class="trend-months">'+trendHTML+'</div>' +
+      '<div style="margin-top:16px"><div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px">'+t.relatedTerms+'</div><div class="tag-list">'+gtTermsHTML+'</div></div>' +
+    '</div>' +
+
+    '<div class="section-label">'+t.sectionAud+'</div>' +
+    '<div class="grid-2">' +
+      '<div class="card"><div class="card-label">'+t.labelSex+'</div>' +
+        '<div class="gender-row"><div class="gender-m" style="width:'+aud.sexo_masculino_pct+'%">♂ '+aud.sexo_masculino_pct+'%</div><div class="gender-f" style="width:'+aud.sexo_femenino_pct+'%">♀ '+aud.sexo_femenino_pct+'%</div></div>' +
+        '<div class="gender-legend"><span><div class="dot" style="background:var(--accent2)"></div>'+t.men+' '+aud.sexo_masculino_pct+'%</span><span><div class="dot" style="background:var(--accent4)"></div>'+t.women+' '+aud.sexo_femenino_pct+'%</span></div>' +
+        '<div style="margin-top:14px;font-family:\'IBM Plex Mono\',monospace;font-size:0.73rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:12px">'+t.buyer+' '+aud.perfil_comprador+'</div>' +
+      '</div>' +
+      '<div class="card"><div class="card-label">'+t.labelAge+'</div>'+ageHTML+'</div>' +
+    '</div>' +
+
+    '<div class="section-label">'+t.sectionPinterest+'</div>' +
+    '<div class="card-full">' +
+      '<div class="platform-header"><span>📌</span> Pinterest Trends <span class="plat-badge plat-pinterest">INSPIRACIÓN</span>' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:var(--muted);margin-left:auto">'+t.popularity+': '+pin.popularidad+'/100 · '+pin.tendencia+'</span>' +
+      '</div>' +
+      '<div class="metric" style="margin-bottom:14px"><div class="bar-track" style="height:5px"><div class="bar-fill purple" data-val="'+pin.popularidad+'"></div></div></div>' +
+      '<div class="grid-2" style="margin-bottom:0">' +
+        '<div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px">'+t.trendingPins+'</div>'+pinsHTML+'</div>' +
+        '<div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.68rem;color:var(--muted);margin-bottom:8px;letter-spacing:1px">'+t.categories+'</div><div class="tag-list">'+pinCatsHTML+'</div></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="section-label">'+t.sectionFB+'</div>' +
+    '<div class="card-full">' +
+      '<div class="platform-header"><span>📣</span> Facebook Ad Library <span class="plat-badge plat-fb">ADS</span>' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:'+fbColor+';margin-left:auto">'+fbStatus+'</span>' +
+      '</div>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:12px">'+t.investLevel+': <span style="color:var(--text);font-weight:600">'+fb.nivel_inversion+'</span></div>' +
+      fbAdsHTML +
+      '<div style="margin-top:14px;padding:13px;background:rgba(255,59,110,0.05);border:1px solid rgba(255,59,110,0.15);border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:0.76rem;color:var(--muted);line-height:1.6">💡 <span style="color:var(--text)">'+fb.recomendacion_ad+'</span></div>' +
+    '</div>' +
+
+    '<div class="section-label">'+t.sectionSummary+'</div>' +
+    '<div class="card-full">' +
+      '<div class="card-label">'+t.labelSummary+'</div>' +
+      '<div style="margin-bottom:12px;display:flex;gap:6px;align-items:center">' +
+        '<span class="stars" style="font-size:1rem">'+starsHTML(stars)+'</span>' +
+        '<span class="reliability-tag '+relClass(stars)+'">'+starLabel(stars,t)+'</span>' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:0.65rem;color:var(--muted)">'+consenso+'% consensus</span>' +
+      '</div>' +
+      '<div class="insight-block">'+d.resumen_ejecutivo+'</div>' +
+    '</div>' +
+
+    '<div class="export-row">' +
+      '<button class="btn-export-md" id="btnExportMD">📄 '+t.exportMD+'</button>' +
+      '<button class="btn-export" onclick="copyContent(window._lastData)">⎘ '+t.exportCopy+'</button>' +
+    '</div>';
+
+  const results = document.getElementById('results');
+  results.innerHTML = html;
+  results.classList.add('visible');
+
+  setTimeout(() => {
+    document.querySelectorAll('.bar-fill[data-val]').forEach(b => { b.style.width = b.dataset.val + '%'; });
+    document.querySelectorAll('.cbar-fill[data-val]').forEach(b => { b.style.width = b.dataset.val + '%'; });
+    document.querySelectorAll('.trend-bar-inner[data-pct]').forEach(b => {
+      b.style.height = Math.max(2, Math.round(parseInt(b.dataset.pct)*0.5)) + 'px';
+    });
+    
+    drawRadarChart(
+      { demanda: d.sonnet_demanda, rentabilidad: d.sonnet_rentabilidad, facilidad: d.sonnet_facilidad },
+      { demanda: d.opus_demanda, rentabilidad: d.opus_rentabilidad, facilidad: d.opus_facilidad },
+      { demanda: d.demanda, rentabilidad: d.rentabilidad, facilidad: d.facilidad_entrada }
+    );
+    document.getElementById('btnExportMD').onclick = () => exportMarkdown(d);
+  }, 120);
+
+  saveToHistory(d);
+
+  window._lastData = d;
+}
+
+// ══════════════════════════════════════════════
+// EXPORT EXCEL
+// ══════════════════════════════════════════════
+function exportExcel(d) {
+  if (!d) return;
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet([
+    ['MarketScout DUAL·AI — Informe de mercado','',d.nicho],
+    ['Modelos utilizados','Claude Sonnet 4 + Claude Opus 4 → Síntesis IA',''],
+    ['Consenso entre IAs',d.consenso_pct + '%',''],
+    ['Fiabilidad (estrellas)',d.estrellas_fiabilidad + '/5',''],
+    [],
+    ['MÉTRICAS SÍNTESIS','Síntesis','Sonnet','Opus'],
+    ['Oportunidad',d.puntuacion_oportunidad,d.sonnet_oportunidad||'—',d.opus_oportunidad||'—'],
+    ['Demanda',d.demanda,d.sonnet_demanda||'—',d.opus_demanda||'—'],
+    ['Rentabilidad',d.rentabilidad,d.sonnet_rentabilidad||'—',d.opus_rentabilidad||'—'],
+    ['Facilidad entrada',d.facilidad_entrada,d.sonnet_facilidad||'—',d.opus_facilidad||'—'],
+    ['Competencia',d.nivel_competencia,'',''],
+    ['Tendencia',d.tendencia,'',''],
+    ['Ticket medio',d.ticket_medio_estimado,'',''],
+    [],
+    ['DIVERGENCIAS','',''],
+    ...(d.divergencias||[]).filter(x=>x).map(x=>['⚡ '+x,'','']),
+    [],
+    ['RESUMEN EJECUTIVO','',''],
+    [d.resumen_ejecutivo,'',''],
+  ]);
+  ws1['!cols'] = [{wch:30},{wch:40},{wch:18},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Síntesis');
+
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['Empresa','Tiene Web','Tipo'],
+    ...d.competidores.map(c=>[c.nombre,c.web?'Sí':'No',c.tipo])
+  ]);
+  ws2['!cols']=[{wch:30},{wch:12},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Competidores');
+
+  const ws3 = XLSX.utils.aoa_to_sheet([
+    ['Empresa','Sector','Email estimado','Tiene Web','Oportunidad'],
+    ...d.leads_potenciales.map(l=>[l.nombre,l.sector,l.email_estimado,l.tiene_web?'Sí':'No',l.oportunidad])
+  ]);
+  ws3['!cols']=[{wch:28},{wch:18},{wch:30},{wch:12},{wch:28}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Leads');
+
+  const ws4 = XLSX.utils.aoa_to_sheet([
+    ['Marca','Copy estimado','Tipo','Objetivo'],
+    ...d.facebook_ads.marcas_anunciando.map(a=>[a.marca,a.copy_estimado,a.tipo_anuncio,a.objetivo])
+  ]);
+  ws4['!cols']=[{wch:22},{wch:48},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Facebook Ads');
+
+  const ws5 = XLSX.utils.aoa_to_sheet([
+    ['Pin tendencia','Guardados estimados'],
+    ...d.pinterest_trends.pins_destacados.map(p=>[p.titulo,p.guardados_estimados])
+  ]);
+  ws5['!cols']=[{wch:40},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, ws5, 'Pinterest');
+
+  XLSX.writeFile(wb, 'MarketScout_' + d.nicho.replace(/\s+/g,'_') + '.xlsx');
+}
+
+// ══════════════════════════════════════════════
+// COPY CONTENT
+// ══════════════════════════════════════════════
+function copyContent(d) {
+  if (!d) return;
+  const t = i18n[currentLang];
+  const stars = starsHTML(d.estrellas_fiabilidad||3);
+  const lines = [
+    '═══════════════════════════════════════════',
+    '  MARKETSCOUT DUAL·AI — ' + d.nicho.toUpperCase(),
+    '  Sonnet 4 + Opus 4 → Síntesis verificada',
+    '═══════════════════════════════════════════',
+    '',
+    '【 FIABILIDAD 】',
+    stars + ' ' + starLabel(d.estrellas_fiabilidad||3, t),
+    'Consenso entre IAs: ' + (d.consenso_pct||'—') + '%',
+    '',
+    '【 MÉTRICAS SÍNTESIS 】',
+    t.opportunity + ': ' + d.puntuacion_oportunidad + '/100  (Sonnet:' + (d.sonnet_oportunidad||'—') + ' | Opus:' + (d.opus_oportunidad||'—') + ')',
+    t.demanda + ': ' + d.demanda + '/100  (S:' + (d.sonnet_demanda||'—') + ' | O:' + (d.opus_demanda||'—') + ')',
+    t.rentabilidad + ': ' + d.rentabilidad + '/100  (S:' + (d.sonnet_rentabilidad||'—') + ' | O:' + (d.opus_rentabilidad||'—') + ')',
+    t.facilidad + ': ' + d.facilidad_entrada + '/100',
+    t.competencia + ': ' + d.nivel_competencia,
+    t.tendencia + ': ' + d.tendencia,
+    t.ticket + ': ' + d.ticket_medio_estimado,
+    '',
+    (d.divergencias && d.divergencias.filter(x=>x).length ? '【 DIVERGENCIAS IAs 】\n' + d.divergencias.filter(x=>x).map(x=>'⚡ '+x).join('\n') + '\n' : ''),
+    '【 ' + t.labelKeywords + ' 】',
+    d.palabras_clave.join(' · '),
+    '',
+    '【 ' + t.labelCompetitors + ' 】',
+    ...d.competidores.map(c => '• ' + c.nombre + ' (' + c.tipo + ') — ' + (c.web?t.hasWeb:t.noWeb)),
+    '',
+    '【 ' + t.labelLeads + ' 】',
+    ...d.leads_potenciales.map(l => '• ' + l.nombre + '\n  ✉ ' + l.email_estimado + ' | ' + l.oportunidad),
+    '',
+    '【 ' + t.sectionGoogle + ' 】',
+    t.popularity + ': ' + d.google_trends.nivel_busqueda + '/100 · ' + t.peak + ': ' + d.google_trends.pico_estacional,
+    t.relatedTerms + ': ' + d.google_trends.terminos_relacionados.join(', '),
+    '',
+    '【 ' + t.sectionAud + ' 】',
+    t.men + ': ' + d.audiencia.sexo_masculino_pct + '% | ' + t.women + ': ' + d.audiencia.sexo_femenino_pct + '%',
+    ...d.audiencia.grupos_edad.map(g => '  ' + g.rango + ': ' + g.pct + '%'),
+    t.buyer + ' ' + d.audiencia.perfil_comprador,
+    '',
+    '【 ' + t.sectionPinterest + ' 】',
+    t.popularity + ': ' + d.pinterest_trends.popularidad + '/100 — ' + d.pinterest_trends.tendencia,
+    ...d.pinterest_trends.pins_destacados.map(p => '📌 ' + p.titulo + ' (~' + Number(p.guardados_estimados).toLocaleString() + ' ' + t.savedEst + ')'),
+    '',
+    '【 ' + t.sectionFB + ' 】',
+    (d.facebook_ads.anuncios_activos ? t.adsActive : t.adsNone),
+    t.investLevel + ': ' + d.facebook_ads.nivel_inversion,
+    ...d.facebook_ads.marcas_anunciando.map(a => '• ' + a.marca + ' [' + a.tipo_anuncio + '/' + a.objetivo + ']: "' + a.copy_estimado + '"'),
+    '💡 ' + d.facebook_ads.recomendacion_ad,
+    '',
+    '【 ' + t.sectionSummary + ' 】',
+    d.resumen_ejecutivo,
+    '',
+    '───────────────────────────────────────────',
+    '  MarketScout DUAL·AI · ' + new Date().toLocaleDateString(),
+    '───────────────────────────────────────────',
+  ];
+
+  const text = lines.join('\n');
+  function showPopup() {
+    const popup = document.getElementById('copyPopup');
+    popup.textContent = currentLang === 'es' ? 'COPIADO' : 'COPIED';
+    popup.classList.add('show');
+    setTimeout(() => popup.classList.remove('show'), 2000);
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); showPopup(); } catch(e) {
+    navigator.clipboard && navigator.clipboard.writeText(text).then(showPopup).catch(()=>{});
+  }
+  document.body.removeChild(ta);
+}
+
+document.getElementById('nicheInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') analyze();
+});
+
+// ══════════════════════════════════════════════
+// LOGIN LOGIC
+// ══════════════════════════════════════════════
+// ⚠️  CAMBIA ESTAS CREDENCIALES antes de subir a GitHub
+const USERS = {
+  'admin':   'marketscout2025',
+  'usuario': 'clave1234'
+};
+
+const loginTexts = {
+  es: {
+    tagline:  '// PLATAFORMA DE INTELIGENCIA DE MERCADO',
+    user:     'USUARIO',
+    pass:     'CONTRASEÑA',
+    btnLogin: 'ENTRAR',
+    errorMsg: 'Usuario o contraseña incorrectos',
+    footer:   'MarketScout DUAL·AI · Powered by Anthropic Claude'
+  },
+  en: {
+    tagline:  '// MARKET INTELLIGENCE PLATFORM',
+    user:     'USERNAME',
+    pass:     'PASSWORD',
+    btnLogin: 'LOG IN',
+    errorMsg: 'Incorrect username or password',
+    footer:   'MarketScout DUAL·AI · Powered by Anthropic Claude'
+  }
+};
+
+let loginLang = 'es';
+
+function setLoginLang(lang) {
+  loginLang = lang;
+  document.getElementById('llES').classList.toggle('active', lang === 'es');
+  document.getElementById('llEN').classList.toggle('active', lang === 'en');
+  const lt = loginTexts[lang];
+  document.getElementById('lt_tagline').textContent  = lt.tagline;
+  document.getElementById('lt_user').textContent     = lt.user;
+  document.getElementById('lt_pass').textContent     = lt.pass;
+  document.getElementById('lt_btnLogin').textContent = lt.btnLogin;
+  document.getElementById('loginErrorMsg').textContent = lt.errorMsg;
+  document.getElementById('lt_footer').textContent   = lt.footer;
+  // Sync app language
+  setLang(lang);
+}
+
+function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+
+  if (USERS[user] && USERS[user] === pass) {
+    errEl.classList.remove('visible');
+    // Success animation then show app
+    const box = document.querySelector('.login-box');
+    box.style.transition = 'opacity 0.4s, transform 0.4s';
+    box.style.opacity = '0';
+    box.style.transform = 'scale(0.96)';
+    setTimeout(() => {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appWrapper').classList.add('visible');
+      setLang(loginLang);
+    }, 420);
+  } else {
+    errEl.classList.remove('visible');
+    void errEl.offsetWidth; // force reflow for re-animation
+    errEl.classList.add('visible');
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginPass').focus();
+  }
+}
+
+// Allow Enter key on login inputs
+['loginUser','loginPass'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+</script>
+</div><!-- end #appWrapper -->
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configuración de IA
+    </div>
+    <p class="modal-desc">// Configura tu acceso a Anthropic Claude. La clave se guarda localmente en tu navegador.</p>
+    
+    <div class="demo-toggle-wrap">
+      <div class="toggle-label">ACTIVAR MODO DEMO</div>
+      <label class="switch">
+        <input type="checkbox" id="demoToggle" onchange="toggleDemoMode()">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="settings-field">
+      <label class="login-label">ANTHROPIC API KEY</label>
+      <div class="login-input-wrap">
+        <input class="login-input" type="password" id="apiKeyInput" placeholder="sk-ant-...">
+        <svg class="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-close" onclick="closeSettings()">Cerrar</button>
+      <button class="btn-save" onclick="saveSettings()">Guardar Cambios</button>
+    </div>
+  </div>
+</div>
+
+<div id="historyModal" class="history-modal">
+  <div class="history-content">
+    <div class="history-header">
+      <div class="history-title" id="ht_title">Historial de Análisis</div>
+      <button class="settings-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <!-- items dynamially added -->
+    </div>
+  </div>
+</div>
+</body>
+</html>

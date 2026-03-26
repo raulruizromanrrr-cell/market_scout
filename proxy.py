@@ -15,7 +15,8 @@ class CORSProxyHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == '/':
+        # Hugging Face sometimes appends query parameters like /?logs=container
+        if self.path == '/' or self.path.startswith('/?'):
             self.path = '/market-scout.html'
         super().do_GET()
         

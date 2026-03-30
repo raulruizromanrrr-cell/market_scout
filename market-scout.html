@@ -580,15 +580,11 @@ function toggleProviderFields() {
 }
 function updateProviderUI() {
   const badge = document.getElementById('dualBadgeHeader');
-  if(badge) {
-    if(config.provider === 'openai') {
+  if (badge) {
+    if (config.provider === 'openai') {
       badge.innerHTML = '⚡ GPT-4o + 4o-mini';
-      document.getElementById('ph1model').textContent = 'gpt-4o-mini';
-      document.getElementById('ph2model').textContent = 'gpt-4o';
     } else {
       badge.innerHTML = '⚡ SONNET + OPUS';
-      document.getElementById('ph1model').textContent = 'claude-sonnet';
-      document.getElementById('ph2model').textContent = 'claude-opus';
     }
   }
 }

@@ -461,7 +461,7 @@ input:checked + .slider:before { transform: translateX(22px); }
   <div class="logo">Market<span>Scout</span> <sub>DUAL·AI</sub></div>
   <div class="header-right">
     <div id="demoBadge" class="demo-badge">MODO DEMO ACTIVO</div>
-    <div class="dual-badge">⚡ SONNET + OPUS</div>
+    <div class="dual-badge" id="dualBadgeHeader">⚡ SONNET + OPUS</div>
     <div class="lang-toggle">
       <button class="lang-btn active" id="btnES" onclick="setLang('es')">ES</button>
       <div class="lang-div"></div>
@@ -543,26 +543,56 @@ input:checked + .slider:before { transform: translateX(22px); }
 // SETTINGS & DEMO MODE
 // ══════════════════════════════════════════════
 let config = {
+  provider: localStorage.getItem('ms_provider') || 'anthropic',
   apiKey: localStorage.getItem('ms_api_key') || '',
+  openaiKey: localStorage.getItem('ms_openai_key') || '',
   demoMode: localStorage.getItem('ms_demo_mode') === 'true'
 };
 
 function openSettings() {
+  document.getElementById('providerSelect').value = config.provider;
   document.getElementById('apiKeyInput').value = config.apiKey;
+  document.getElementById('openaiKeyInput').value = config.openaiKey;
   document.getElementById('demoToggle').checked = config.demoMode;
+  toggleProviderFields();
   document.getElementById('settingsModal').classList.add('visible');
 }
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('visible');
 }
 function saveSettings() {
+  config.provider = document.getElementById('providerSelect').value;
   config.apiKey = document.getElementById('apiKeyInput').value.trim();
+  config.openaiKey = document.getElementById('openaiKeyInput').value.trim();
   config.demoMode = document.getElementById('demoToggle').checked;
+  localStorage.setItem('ms_provider', config.provider);
   localStorage.setItem('ms_api_key', config.apiKey);
+  localStorage.setItem('ms_openai_key', config.openaiKey);
   localStorage.setItem('ms_demo_mode', config.demoMode);
   updateDemoBadge();
+  updateProviderUI();
   closeSettings();
 }
+function toggleProviderFields() {
+  const p = document.getElementById('providerSelect').value;
+  document.getElementById('fieldAnthropic').style.display = p === 'anthropic' ? 'block' : 'none';
+  document.getElementById('fieldOpenAI').style.display = p === 'openai' ? 'block' : 'none';
+}
+function updateProviderUI() {
+  const badge = document.getElementById('dualBadgeHeader');
+  if(badge) {
+    if(config.provider === 'openai') {
+      badge.innerHTML = '⚡ GPT-4o + 4o-mini';
+      document.getElementById('ph1model').textContent = 'gpt-4o-mini';
+      document.getElementById('ph2model').textContent = 'gpt-4o';
+    } else {
+      badge.innerHTML = '⚡ SONNET + OPUS';
+      document.getElementById('ph1model').textContent = 'claude-sonnet';
+      document.getElementById('ph2model').textContent = 'claude-opus';
+    }
+  }
+}
+window.addEventListener('DOMContentLoaded', updateProviderUI);
 function toggleDemoMode() {
   config.demoMode = document.getElementById('demoToggle').checked;
 }
@@ -866,28 +896,47 @@ function buildSynthesisPrompt(niche, r1, r2, lang) {
 
 async function callAPI(model, prompt) {
   if (config.demoMode) return {}; // Handled in analyze()
-  if (!config.apiKey) throw new Error('Falta API Key. Configúrala en ajustes.');
   
-  const modelId = model === 'sonnet' ? 'claude-3-5-sonnet-20240620' : 'claude-3-opus-20240229';
-  
-  // Note: Direct browser calls fail CORS. We now use our local proxy.py to forward them securely.
-  const resp = await fetch('/api/anthropic', {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'x-api-key': config.apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({ model: modelId, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
-  });
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error.message);
-  const raw = data.content.map(b => b.text || '').join('');
-  const clean = raw.replace(/```json|```/g, '').trim();
-  const start = clean.indexOf('{');
-  const end = clean.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No valid JSON found in response');
-  return JSON.parse(clean.slice(start, end + 1));
+  if (config.provider === 'openai') {
+    if (!config.openaiKey) throw new Error('Falta API Key de OpenAI. Configúrala en ajustes.');
+    const modelId = model === 'sonnet' ? 'gpt-4o-mini' : 'gpt-4o';
+    const resp = await fetch('/api/openai', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.openaiKey}`
+      },
+      body: JSON.stringify({ model: modelId, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || resp.statusText);
+    const raw = data.choices[0].message.content;
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('No valid JSON found in response');
+    return JSON.parse(clean.slice(start, end + 1));
+  } else {
+    if (!config.apiKey) throw new Error('Falta API Key de Anthropic. Configúrala en ajustes.');
+    const modelId = model === 'sonnet' ? 'claude-3-5-sonnet-20240620' : 'claude-3-opus-20240229';
+    const resp = await fetch('/api/anthropic', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-api-key': config.apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({ model: modelId, max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || resp.statusText);
+    const raw = data.content.map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('No valid JSON found in response');
+    return JSON.parse(clean.slice(start, end + 1));
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1587,7 +1636,7 @@ function doLogin() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Configuración de IA
     </div>
-    <p class="modal-desc">// Configura tu acceso a Anthropic Claude. La clave se guarda localmente en tu navegador.</p>
+    <p class="modal-desc">// Configura tu acceso a IA. Las claves se guardan localmente en tu navegador.</p>
     
     <div class="demo-toggle-wrap">
       <div class="toggle-label">ACTIVAR MODO DEMO</div>
@@ -1597,10 +1646,26 @@ function doLogin() {
       </label>
     </div>
 
-    <div class="settings-field">
+    <div class="settings-field" style="margin-bottom: 15px;">
+      <label class="login-label">PROVEEDOR DE IA</label>
+      <select id="providerSelect" class="login-input" onchange="toggleProviderFields()" style="width:100%; cursor:pointer;">
+        <option value="anthropic">Anthropic Claude (Sonnet + Opus)</option>
+        <option value="openai">OpenAI (GPT-4o + GPT-4o-mini)</option>
+      </select>
+    </div>
+
+    <div class="settings-field" id="fieldAnthropic">
       <label class="login-label">ANTHROPIC API KEY</label>
       <div class="login-input-wrap">
         <input class="login-input" type="password" id="apiKeyInput" placeholder="sk-ant-...">
+        <svg class="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+    </div>
+
+    <div class="settings-field" id="fieldOpenAI" style="display:none;">
+      <label class="login-label">OPENAI API KEY</label>
+      <div class="login-input-wrap">
+        <input class="login-input" type="password" id="openaiKeyInput" placeholder="sk-proj-...">
         <svg class="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </div>
     </div>

@@ -24,39 +24,50 @@ class CORSProxyHandler(SimpleHTTPRequestHandler):
         if self.path == '/api/anthropic':
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
-            
-            # Forward headers securely
             headers = {
                 'Content-Type': 'application/json',
                 'x-api-key': self.headers.get('x-api-key', ''),
                 'anthropic-version': self.headers.get('anthropic-version', '2023-06-01')
             }
-            
             req = urllib.request.Request('https://api.anthropic.com/v1/messages', data=post_data, headers=headers, method='POST')
-            try:
-                with urllib.request.urlopen(req) as response:
-                    res_body = response.read()
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
-                    self.wfile.write(res_body)
-            except urllib.error.HTTPError as e:
-                self.send_response(e.code)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(e.read())
-            except Exception as e:
-                self.send_response(500)
-                self.end_headers()
-                self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
+            self._send_proxy_req(req)
+            
+        elif self.path == '/api/openai':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': self.headers.get('Authorization', '')
+            }
+            req = urllib.request.Request('https://api.openai.com/v1/chat/completions', data=post_data, headers=headers, method='POST')
+            self._send_proxy_req(req)
+            
         else:
             self.send_error(404, "Not Found")
+
+    def _send_proxy_req(self, req):
+        try:
+            with urllib.request.urlopen(req) as response:
+                res_body = response.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(res_body)
+        except urllib.error.HTTPError as e:
+            self.send_response(e.code)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(e.read())
+        except Exception as e:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))
 
 if __name__ == '__main__':
     port = 7860
     server_address = ('', port)
     httpd = HTTPServer(server_address, CORSProxyHandler)
     print(f"🚀 Servidor Local DUAL-AI activo en: http://localhost:{port}")
-    print(f"📡 Proxy API configurado en: /api/anthropic")
+    print(f"📡 Proxy API Multi-Proveedor: /api/anthropic y /api/openai")
     print(f"Presiona Ctrl+C para detener")
     httpd.serve_forever()
